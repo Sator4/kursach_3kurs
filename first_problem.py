@@ -39,13 +39,10 @@ def flow(x, y):
     r = (x*x + y*y)**0.5
     if r == 0:
         return [0.0, 0.0]
-    Vt_r = math.tanh(r) / math.cosh(r) ** 2
-    theta = math.pi / 2
-    if x != 0:
-        theta = math.atan(y / x)
-    dxdt = 0.05 * (-Vt_r * math.sin(theta))
-    dydt = 0.05 * (Vt_r * math.cos(theta))
-    return dydt, dxdt
+    Vt_r = math.tanh(r) / math.cosh(r)**2
+    dxdt = 0.05 * (-Vt_r * y / r)
+    dydt = 0.05 * (Vt_r * x / r)
+    return [dxdt, dydt]
 
 def particles_to_data(move=True):
     for n in range(len(particles)):

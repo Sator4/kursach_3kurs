@@ -6,10 +6,8 @@ import imageio
 import time
 numpy.set_printoptions(linewidth=5000, precision=2, suppress=True, threshold=numpy.inf)
 
-# from functions import *
-
-size = 500
-frame_number = 300
+size = 200
+frame_number = 100
 scale = 5
 spread_rad = 1
 particle_density = 5
@@ -21,6 +19,7 @@ particles = []  #одномерный массив частиц, которые 
 distsum_in_pixel = [[0 for i in range(size)] for j in range(size)] # сумма расстояний
 # влияющих пискелей, аналог particles_in_pixel
 particles_in_pixel = [[0 for i in range(size)] for j in range(size)]
+filenames = []
 
 class particle:
     def __init__(self, x, y, weight):
@@ -48,12 +47,8 @@ def flow(x, y):
     dydt = 0.05 * (Vt_r * x / r)
     return [dxdt, dydt]
 
-
-
 def particles_to_data(move=True):
     for n in range(len(particles)):
-        # if n == 100:
-        #     print('sum on', n, 'particle', sum([sum(i) for i in data]))
         if move:
             gradient = flow(particles[n].x, particles[n].y)
             particles[n].x += gradient[0]
@@ -73,7 +68,6 @@ def particles_to_data(move=True):
                 distsum_in_pixel[i1][j1] += distance_coef
                 particles_in_pixel[i1][j1] += 1
 
-    # min_distsum = [100, 0, 0, 0]
     for i in range(size):
         for j in range(size):
             if distsum_in_pixel[i][j] > 0:
@@ -95,13 +89,6 @@ def just_move():
         particles[n].x += gradient[0]
         particles[n].y += gradient[1]
 
-filenames = []
-# for n in range(frame_number+1):
-#     filenames.append('out_images\\plot' + str(n) + '.png')
-
-
-print(coord_to_cell(0), coord_to_cell(1))
-
 
 begin_time = time.time()
 
@@ -113,17 +100,10 @@ for i in range(-size, size*2):    ##############  НАЧАЛО КОДА  #######
         #     continue
         x = cell_to_coord(j)
         y = cell_to_coord(i)
-        # if i == 30 and j == 30:
-        #     weight = 1
-        # else:
-        #     weight = 0
         weight = 1
         # weight = initial_distribution(x, y, scale)
         particles.append(particle(x + scale / size, y + scale / size, weight))
 
-# particles_to_data(False)
-# data_np = numpy.array(data)
-# plt.imsave('out_images\\plot0.png', data_np, cmap='plasma')
 
 end_time = time.time()
 print(end_time - begin_time)
@@ -137,21 +117,16 @@ for k in range(frame_number):
         print(k, 'time elapsed =', total_time)
     begin_time = time.time()
     data = [[0 for i in range(size)] for j in range(size)]
-    distsum_in_pixel = [[0 for i in range(size)] for j in range(size)]
-    particles_in_pixel = [[0 for i in range(size)] for j in range(size)]
+    # distsum_in_pixel = [[0 for i in range(size)] for j in range(size)]
+    # particles_in_pixel = [[0 for i in range(size)] for j in range(size)]
     vortex_pivot[0] += 0.01
     vortex_pivot[1] += 0.01
 
-    # if k % 10 == 0:
     filenames.append('out_images\\plot' + str(k) + '.png')
     particles_to_data()
     data_np = numpy.array(data)
     plt.imsave(filenames[-1], data_np, cmap='plasma')
-    # else:
-    #     just_move()
 
-    # data_np = numpy.array(data)
-    # plt.imsave(filenames[k+1], data_np, cmap='plasma')
     end_time = time.time()
     total_time += end_time - begin_time
 
