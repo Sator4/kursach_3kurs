@@ -1,5 +1,6 @@
 import math
 
+from scipy.integrate import odeint
 from matplotlib import pyplot as plt
 import numpy
 import imageio
@@ -8,12 +9,12 @@ numpy.set_printoptions(linewidth=5000, precision=2, suppress=True, threshold=num
 
 # from functions import *
 
-size = 500
-frame_number = 300
+size = 100
+frame_number = 100
 scale = 5
-spread_rad = 1
-particle_density = 5
-generate_threshold = [0, 0]
+spread_rad = 5
+particle_density = 1
+generate_threshold = [5, 5]
 vortex_pivot = [0.0, 0.0]
 
 data = [[0 for i in range(size)] for j in range(size)]    #пиксели, отрисовка
@@ -38,15 +39,24 @@ def initial_distribution(x, y, scale):
     return math.atan(y*20 / scale) + math.pi/2
 
 def flow(x, y):
-    x += vortex_pivot[0]
-    y += vortex_pivot[1]
     r = (x*x + y*y)**0.5
     if r == 0:
         return [0.0, 0.0]
-    Vt_r = math.tanh(r) / math.cosh(r)**2
-    dxdt = 0.05 * (-Vt_r * y / r)
-    dydt = 0.05 * (Vt_r * x / r)
-    return [dxdt, dydt]
+    Vt_r = math.tanh(r) / math.cosh(r) ** 2
+    theta = math.pi / 2
+    if x != 0:
+        theta = math.atan(y / x)
+    u = -Vt_r * math.sin(theta) * 0.05
+    v = Vt_r * math.cos(theta) * 0.05
+    return v, u
+
+    # r = (x*x + y*y)**0.5
+    # if r == 0:
+    #     return [0.0, 0.0]
+    # Vt_r = math.tanh(r) / math.cosh(r)**2
+    # dxdt = 0.05 * (-Vt_r * y / r)
+    # dydt = 0.05 * (Vt_r * x / r)
+    # return [dxdt, dydt]
 
 
 
@@ -87,7 +97,7 @@ def particles_to_data(move=True):
             # if min_distsum[1] > particles_in_pixel[i][j]:
             #     min_distsum = [distsum_in_pixel[i][j], particles_in_pixel[i][j], i, j]
     # print('min_distsum', min_distsum)
-    # print('len(particles)', len(particles))
+    print('len(particles)', len(particles))
 
 def just_move():
     for n in range(len(particles)):
@@ -99,26 +109,19 @@ filenames = []
 # for n in range(frame_number+1):
 #     filenames.append('out_images\\plot' + str(n) + '.png')
 
-
-print(coord_to_cell(0), coord_to_cell(1))
-
-
 begin_time = time.time()
 
-for i in range(-size, size*2):    ##############  НАЧАЛО КОДА  ###################
-    for j in range(-size, size*2):
+for i in range(size):    ##############  НАЧАЛО КОДА  ###################
+    for j in range(size):
         if i % particle_density != 0 or j % particle_density != 0:
             continue
-        # if j != size/2:
-        #     continue
         x = cell_to_coord(j)
         y = cell_to_coord(i)
         # if i == 30 and j == 30:
         #     weight = 1
         # else:
         #     weight = 0
-        weight = 1
-        # weight = initial_distribution(x, y, scale)
+        weight = initial_distribution(x, y, scale)
         particles.append(particle(x + scale / size, y + scale / size, weight))
 
 # particles_to_data(False)
@@ -142,13 +145,13 @@ for k in range(frame_number):
     vortex_pivot[0] += 0.01
     vortex_pivot[1] += 0.01
 
-    # if k % 10 == 0:
-    filenames.append('out_images\\plot' + str(k) + '.png')
-    particles_to_data()
-    data_np = numpy.array(data)
-    plt.imsave(filenames[-1], data_np, cmap='plasma')
-    # else:
-    #     just_move()
+    if k % 10 == 0:
+        filenames.append('out_images\\plot' + str(k) + '.png')
+        particles_to_data()
+        data_np = numpy.array(data)
+        plt.imsave(filenames[-1], data_np, cmap='plasma')
+    else:
+        just_move()
 
     # data_np = numpy.array(data)
     # plt.imsave(filenames[k+1], data_np, cmap='plasma')
@@ -156,7 +159,7 @@ for k in range(frame_number):
     total_time += end_time - begin_time
 
 with imageio.get_writer('out_mov\mov.gif',
-                        mode='I', duration=0.033) as writer:
+                        mode='I', duration=0.33) as writer:
     for filename in filenames:
         image = imageio.imread(filename)
         writer.append_data(image)
@@ -169,5 +172,4 @@ plt.figure(figsize=(5,5))
 plt.imshow(data_np, cmap='gist_heat')
 plt.show()
 
-total_time += end_time - begin_time
 print(total_time)

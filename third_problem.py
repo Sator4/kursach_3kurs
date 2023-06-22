@@ -1,5 +1,6 @@
 import math
 
+from scipy.integrate import odeint
 from matplotlib import pyplot as plt
 import numpy
 import imageio
@@ -8,12 +9,12 @@ numpy.set_printoptions(linewidth=5000, precision=2, suppress=True, threshold=num
 
 # from functions import *
 
-size = 500
-frame_number = 300
+size = 100
+frame_number = 100
 scale = 5
-spread_rad = 1
-particle_density = 5
-generate_threshold = [0, 0]
+spread_rad = 5
+particle_density = 1
+generate_threshold = [5, 5]
 vortex_pivot = [0.0, 0.0]
 
 data = [[0 for i in range(size)] for j in range(size)]    #пиксели, отрисовка
@@ -21,6 +22,8 @@ particles = []  #одномерный массив частиц, которые 
 distsum_in_pixel = [[0 for i in range(size)] for j in range(size)] # сумма расстояний
 # влияющих пискелей, аналог particles_in_pixel
 particles_in_pixel = [[0 for i in range(size)] for j in range(size)]
+
+flow_grid = [[0 for i in range(size)] for j in range(size)]
 
 class particle:
     def __init__(self, x, y, weight):
@@ -38,8 +41,8 @@ def initial_distribution(x, y, scale):
     return math.atan(y*20 / scale) + math.pi/2
 
 def flow(x, y):
-    x += vortex_pivot[0]
-    y += vortex_pivot[1]
+    # x += vortex_pivot[0]
+    # y += vortex_pivot[1]
     r = (x*x + y*y)**0.5
     if r == 0:
         return [0.0, 0.0]
@@ -48,6 +51,53 @@ def flow(x, y):
     dydt = 0.05 * (Vt_r * x / r)
     return [dxdt, dydt]
 
+for i in range(size):
+    for j in range(size):
+        flow_grid[i][j] = flow(cell_to_coord(j), cell_to_coord(i))
+        # print(i, j, flow_grid[70][70])
+
+
+def get_flow_from_grid(x, y):
+    # nlt = [0, 0]
+    # nearest = [cell_to_coord(coord_to_cell(x)), cell_to_coord(coord_to_cell(y))]
+    # nlt = [coord_to_cell(i) for i in nearest[::-1]]
+    # if nearest[0] > x:
+    #     nlt[1] -= 1
+    # if nearest[1] > y:
+    #     nlt[0] -= 1
+    #
+    # nlt[0] = max(nlt[0], 0)
+    # nlt[0] = min(nlt[0], size-1)
+    # nlt[1] = max(nlt[1], 0)
+    # nlt[1] = min(nlt[1], size-1)
+    #
+    # nearest_coords = [[cell_to_coord(nlt[1]), cell_to_coord(nlt[0])],
+    #                   [cell_to_coord(nlt[1]+1), cell_to_coord(nlt[0])],
+    #                   [cell_to_coord(nlt[1]), cell_to_coord(nlt[0]+1)],
+    #                   [cell_to_coord(nlt[1]+1), cell_to_coord(nlt[0]+1)]]
+    # if x < 0 or x > size-1 or y < 0 or y > size-1:
+    #     nearest_coords = [[cell_to_coord(nlt[1]), cell_to_coord(nlt[0])]]
+    # interpoints = [[coord_to_cell(i)-1, coord_to_cell(j)-1] for i, j in nearest_coords]
+    # distances = [((j - x)**2 + (i - y)**2)**0.5 for i, j in nearest_coords]
+    # sumdist = 0
+    # dxdt, dydt = 0, 0
+    # for i in range(len(interpoints)):
+    #     # print(flow_grid[interpoints[i][0]][interpoints[i][1]])
+    #     dxdt += flow_grid[interpoints[i][0]][interpoints[i][1]][0]
+    #     dydt += flow_grid[interpoints[i][0]][interpoints[i][1]][1]
+    # dxdt /= 4
+    # dydt /= 4
+
+
+
+    nearest = [coord_to_cell(y), coord_to_cell(x)]
+    nearest[0] = min(nearest[0], size-1)
+    nearest[0] = max(nearest[0], 0)
+    nearest[1] = min(nearest[1], size-1)
+    nearest[1] = max(nearest[1], 0)
+    dxdt = flow_grid[nearest[0]][nearest[1]][0]
+    dydt = flow_grid[nearest[0]][nearest[1]][1]
+    return dxdt, dydt
 
 
 def particles_to_data(move=True):
@@ -55,7 +105,8 @@ def particles_to_data(move=True):
         # if n == 100:
         #     print('sum on', n, 'particle', sum([sum(i) for i in data]))
         if move:
-            gradient = flow(particles[n].x, particles[n].y)
+            gradient = get_flow_from_grid(particles[n].x, particles[n].y)
+            # gradient = flow(particles[n].x, particles[n].y)
             particles[n].x += gradient[0]
             particles[n].y += gradient[1]
         y, x = particles[n].y, particles[n].x
@@ -87,11 +138,12 @@ def particles_to_data(move=True):
             # if min_distsum[1] > particles_in_pixel[i][j]:
             #     min_distsum = [distsum_in_pixel[i][j], particles_in_pixel[i][j], i, j]
     # print('min_distsum', min_distsum)
-    # print('len(particles)', len(particles))
+    print('len(particles)', len(particles))
 
 def just_move():
     for n in range(len(particles)):
-        gradient = flow(particles[n].x, particles[n].y)
+        gradient = get_flow_from_grid(particles[n].x, particles[n].y)
+        # gradient = flow(particles[n].x, particles[n].y)
         particles[n].x += gradient[0]
         particles[n].y += gradient[1]
 
@@ -99,26 +151,19 @@ filenames = []
 # for n in range(frame_number+1):
 #     filenames.append('out_images\\plot' + str(n) + '.png')
 
-
-print(coord_to_cell(0), coord_to_cell(1))
-
-
 begin_time = time.time()
 
-for i in range(-size, size*2):    ##############  НАЧАЛО КОДА  ###################
-    for j in range(-size, size*2):
+for i in range(size):    ##############  НАЧАЛО КОДА  ###################
+    for j in range(size):
         if i % particle_density != 0 or j % particle_density != 0:
             continue
-        # if j != size/2:
-        #     continue
         x = cell_to_coord(j)
         y = cell_to_coord(i)
         # if i == 30 and j == 30:
         #     weight = 1
         # else:
         #     weight = 0
-        weight = 1
-        # weight = initial_distribution(x, y, scale)
+        weight = initial_distribution(x, y, scale)
         particles.append(particle(x + scale / size, y + scale / size, weight))
 
 # particles_to_data(False)
@@ -142,13 +187,13 @@ for k in range(frame_number):
     vortex_pivot[0] += 0.01
     vortex_pivot[1] += 0.01
 
-    # if k % 10 == 0:
-    filenames.append('out_images\\plot' + str(k) + '.png')
-    particles_to_data()
-    data_np = numpy.array(data)
-    plt.imsave(filenames[-1], data_np, cmap='plasma')
-    # else:
-    #     just_move()
+    if k % 10 == 0:
+        filenames.append('out_images\\plot' + str(k) + '.png')
+        particles_to_data()
+        data_np = numpy.array(data)
+        plt.imsave(filenames[-1], data_np, cmap='plasma')
+    else:
+        just_move()
 
     # data_np = numpy.array(data)
     # plt.imsave(filenames[k+1], data_np, cmap='plasma')
@@ -156,7 +201,7 @@ for k in range(frame_number):
     total_time += end_time - begin_time
 
 with imageio.get_writer('out_mov\mov.gif',
-                        mode='I', duration=0.033) as writer:
+                        mode='I', duration=0.33) as writer:
     for filename in filenames:
         image = imageio.imread(filename)
         writer.append_data(image)
@@ -169,5 +214,4 @@ plt.figure(figsize=(5,5))
 plt.imshow(data_np, cmap='gist_heat')
 plt.show()
 
-total_time += end_time - begin_time
 print(total_time)
