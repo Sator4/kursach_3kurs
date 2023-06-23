@@ -6,12 +6,15 @@ import imageio
 import time
 numpy.set_printoptions(linewidth=5000, precision=2, suppress=True, threshold=numpy.inf)
 
-size = 200
-frame_number = 100
+size = 300
+frame_number = 200
 scale = 5
 spread_rad = 1
-particle_density = 5
+particle_density = 10
 generate_threshold = [0, 0]
+speed = 0.05
+
+
 
 data = [[0 for i in range(size)] for j in range(size)]    #пиксели, отрисовка
 particles = []  #одномерный массив частиц, которые плавают
@@ -20,7 +23,9 @@ distsum_in_pixel = [[0 for i in range(size)] for j in range(size)] # сумма 
 particles_in_pixel = [[0 for i in range(size)] for j in range(size)]
 filenames = []
 flow_grid = [[0 for i in range(size)] for j in range(size)]
-
+watchlist = [992, 2081, 1638, 983, 1637, 2129, 2656, 1227, 1886, 1829]
+watch_coords = []
+watch_frames = [0, 99, 199]
 
 class particle:
     def __init__(self, x, y, weight):
@@ -42,8 +47,8 @@ def flow(x, y):
     if r == 0:
         return [0.0, 0.0]
     Vt_r = math.tanh(r) / math.cosh(r)**2
-    dxdt = 0.05 * (-Vt_r * y / r)
-    dydt = 0.05 * (Vt_r * x / r)
+    dxdt = speed * (-Vt_r * y / r)
+    dydt = speed * (Vt_r * x / r)
     return [dxdt, dydt]
 
 for i in range(size):
@@ -92,16 +97,19 @@ def get_flow_from_grid(x, y):
     return dxdt, dydt
 
 def particles_to_data(move=True):
+    global x, y
     for n in range(len(particles)):
         if move:
             gradient = get_flow_from_grid(particles[n].x, particles[n].y)
             # gradient = flow(particles[n].x, particles[n].y)
             particles[n].x += gradient[0]
             particles[n].y += gradient[1]
+            if n in watchlist:
+                watch_coords[watchlist.index(n)].append([x, y])
         y, x = particles[n].y, particles[n].x
         i, j = coord_to_cell(y), coord_to_cell(x)
-        i_min, i_max = max(i - spread_rad, 0), min(i + spread_rad, size)
-        j_min, j_max = max(j - spread_rad, 0), min(j + spread_rad, size)
+        i_min, i_max = max(i, 0), min(i + spread_rad, size)
+        j_min, j_max = max(j, 0), min(j + spread_rad, size)
         for i1 in range(i_min, i_max):
             for j1 in range(j_min, j_max):
                 y1, x1 = cell_to_coord(i1), cell_to_coord(j1)
@@ -138,18 +146,27 @@ def just_move():
 
 begin_time = time.time()
 
-for i in range(-size, size*2):    ##############  НАЧАЛО КОДА  ###################
-    for j in range(-size, size*2):
+for i in range(-size//2, size*3//2):    ##############  НАЧАЛО КОДА  ###################
+    for j in range(-size//2, size*3//2):
         if i % particle_density != 0 or j % particle_density != 0:
             continue
         # if j != size/2:
         #     continue
         x = cell_to_coord(j)
         y = cell_to_coord(i)
-        weight = 1
+        if len(particles)-1 in watchlist:
+            weight = 2
+            watch_coords.append([[x, y]])
+        else:
+            weight = 1
         # weight = initial_distribution(x, y, scale)
         particles.append(particle(x + scale / size, y + scale / size, weight))
 
+
+filenames.append('out_images\\plot0.png')
+particles_to_data(False)
+data_np = numpy.array(data)
+plt.imsave(filenames[-1], data_np, cmap='plasma')
 
 end_time = time.time()
 print(end_time - begin_time)
@@ -163,8 +180,8 @@ for k in range(frame_number):
         print(k, 'time elapsed =', total_time)
     begin_time = time.time()
     data = [[0 for i in range(size)] for j in range(size)]
-    # distsum_in_pixel = [[0 for i in range(size)] for j in range(size)]
-    # particles_in_pixel = [[0 for i in range(size)] for j in range(size)]
+    distsum_in_pixel = [[0 for i in range(size)] for j in range(size)]
+    particles_in_pixel = [[0 for i in range(size)] for j in range(size)]
 
     filenames.append('out_images\\plot' + str(k) + '.png')
     particles_to_data()
@@ -173,6 +190,26 @@ for k in range(frame_number):
 
     end_time = time.time()
     total_time += end_time - begin_time
+
+f = open('out_stats\\third_problem_watch.txt', "w")
+for i in watchlist:
+    f.write(str(i))
+    f.write(' ')
+f.write('\n')
+for i in watch_frames:
+    f.write(str(i))
+    f.write(' ')
+f.write('\n')
+for particle_number in range(len(watchlist)):
+    for frame in watch_frames:
+        f.write(str(watch_coords[particle_number][frame][0]))
+        # f.write(str(watch_coords[watchlist[i]][j][0]))
+        f.write(' ')
+        f.write(str(watch_coords[particle_number][frame][1]))
+        f.write(' ')
+    f.write('\n')
+    # print(i[0], i[99], i[199], sep=', ', end=',\n')
+f.close()
 
 with imageio.get_writer('out_mov\mov.gif',
                         mode='I', duration=0.033) as writer:
