@@ -6,13 +6,13 @@ import imageio
 import time
 numpy.set_printoptions(linewidth=5000, precision=2, suppress=True, threshold=numpy.inf)
 
-size = 400
+size = 300
 frame_number = 300
 scale = 5
 spread_rad = 1
 particle_density = 10
 generate_threshold = [0, 0]
-vortex_pivot = [0.0, 1.25]
+vortex_pivot = [-2.0, -2.0]
 speed = 0.05
 
 data = [[0 for i in range(size)] for j in range(size)]    #пиксели, отрисовка
@@ -129,8 +129,10 @@ for k in range(frame_number):
     particles_in_pixel = [[0 for i in range(size)] for j in range(size)]
     j, i = vortex_pivot[0], vortex_pivot[1]
     if max(vortex_pivot) < 100:
-        vortex_pivot[0] += 0.015 * i# + 0.1 * j
-        vortex_pivot[1] += -0.015 * j# - 0.1 * i
+        vortex_pivot[0] += 0.01
+        vortex_pivot[1] += 0.01
+        # vortex_pivot[0] += 0.015 * i# + 0.1 * j
+        # vortex_pivot[1] += -0.015 * j# - 0.1 * i
 
     filenames.append('out_images\\plot' + str(k) + '.png')
     particles_to_data()

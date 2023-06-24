@@ -7,7 +7,7 @@ import time
 numpy.set_printoptions(linewidth=5000, precision=2, suppress=True, threshold=numpy.inf)
 
 size = 300
-frame_number = 200
+frame_number = 500
 scale = 5
 spread_rad = 1
 particle_density = 10
@@ -24,7 +24,7 @@ particles_in_pixel = [[0 for i in range(size)] for j in range(size)]
 filenames = []
 watchlist = [992, 2081, 1638, 983, 1637, 2129, 2656, 1227, 1886, 1829]
 watch_coords = []
-watch_frames = [0, 99, 199]
+watch_frames = [0, 499]
 
 class particle:
     def __init__(self, x, y, weight):
@@ -58,7 +58,7 @@ def particles_to_data(move=True):
             particles[n].x += gradient[0]
             particles[n].y += gradient[1]
             if n in watchlist:
-                watch_coords[watchlist.index(n)].append([x, y])
+                watch_coords[watchlist.index(n)].append([particles[n].x, particles[n].y])
         y, x = particles[n].y, particles[n].x
         i, j = coord_to_cell(y), coord_to_cell(x)
         i_min, i_max = max(i, 0), min(i + spread_rad, size)
@@ -118,7 +118,7 @@ for i in range(-size//2, size*3//2):    ##############  НАЧАЛО КОДА  #
 filenames.append('out_images\\plot0.png')
 particles_to_data(False)
 data_np = numpy.array(data)
-plt.imsave(filenames[-1], data_np, cmap='plasma')
+plt.imsave(filenames[-1], data_np, cmap='gist_heat')
 
 end_time = time.time()
 print(end_time - begin_time)
@@ -138,16 +138,21 @@ for k in range(frame_number):
     filenames.append('out_images\\plot' + str(k) + '.png')
     particles_to_data()
     data_np = numpy.array(data)
-    plt.imsave(filenames[-1], data_np, cmap='plasma')
+    plt.imsave(filenames[-1], data_np, cmap='gist_heat')
 
     end_time = time.time()
     total_time += end_time - begin_time
 
 f = open('out_stats\\first_problem_watch.txt', "w")
+f.write('size = ' + str(size) + ', frame_number = ' + str(frame_number) +
+        ', scale = ' + str(scale) + ', particle_density = ' + str(particle_density) +
+        ', speed = ' + str(speed) + '\n')
+f.write('watchlist: ')
 for i in watchlist:
     f.write(str(i))
     f.write(' ')
 f.write('\n')
+f.write('watch_frames: ')
 for i in watch_frames:
     f.write(str(i))
     f.write(' ')
@@ -155,12 +160,10 @@ f.write('\n')
 for particle_number in range(len(watchlist)):
     for frame in watch_frames:
         f.write(str(watch_coords[particle_number][frame][0]))
-        # f.write(str(watch_coords[watchlist[i]][j][0]))
         f.write(' ')
         f.write(str(watch_coords[particle_number][frame][1]))
         f.write(' ')
     f.write('\n')
-    # print(i[0], i[99], i[199], sep=', ', end=',\n')
 f.close()
 
 with imageio.get_writer('out_mov\mov.gif',
@@ -171,7 +174,7 @@ with imageio.get_writer('out_mov\mov.gif',
 
 particles_to_data()
 data_np = numpy.array(data)
-plt.imsave('out_images\\plot' + '_last' + '.png', data_np, cmap='plasma')
+plt.imsave('out_images\\plot' + '_last' + '.png', data_np, cmap='gist_heat')
 
 plt.figure(figsize=(5,5))
 plt.imshow(data_np, cmap='gist_heat')

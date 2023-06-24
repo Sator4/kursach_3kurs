@@ -103,7 +103,7 @@ for i in range(-size, size*2):    ##############  НАЧАЛО КОДА  #######
         #     continue
         x = cell_to_coord(j)
         y = cell_to_coord(i)
-        weight = 1
+        weight = initial_distribution(x, y) + math.pi/2
         # weight = initial_distribution(x, y, scale)
         particles.append(particle(x + scale / size, y + scale / size, weight))
 

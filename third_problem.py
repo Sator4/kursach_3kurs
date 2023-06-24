@@ -7,13 +7,13 @@ import time
 numpy.set_printoptions(linewidth=5000, precision=2, suppress=True, threshold=numpy.inf)
 
 size = 300
-frame_number = 200
+frame_number = 500
 scale = 5
 spread_rad = 1
 particle_density = 10
 generate_threshold = [0, 0]
 speed = 0.05
-
+interpolation_type = 2 # 0 - no, 1 - simplest, 2 - with weights
 
 
 data = [[0 for i in range(size)] for j in range(size)]    #пиксели, отрисовка
@@ -22,10 +22,10 @@ distsum_in_pixel = [[0 for i in range(size)] for j in range(size)] # сумма 
 # влияющих пискелей, аналог particles_in_pixel
 particles_in_pixel = [[0 for i in range(size)] for j in range(size)]
 filenames = []
-flow_grid = [[0 for i in range(size)] for j in range(size)]
+flow_grid = [[0 for i in range(size*3)] for j in range(size*3)]
 watchlist = [992, 2081, 1638, 983, 1637, 2129, 2656, 1227, 1886, 1829]
 watch_coords = []
-watch_frames = [0, 99, 199]
+watch_frames = [0, 499]
 
 class particle:
     def __init__(self, x, y, weight):
@@ -51,61 +51,67 @@ def flow(x, y):
     dydt = speed * (Vt_r * x / r)
     return [dxdt, dydt]
 
-for i in range(size):
-    for j in range(size):
-        flow_grid[i][j] = flow(cell_to_coord(j), cell_to_coord(i))
+for i in range(size*3):
+    for j in range(size*3):
+        flow_grid[i][j] = flow(cell_to_coord(j-size), cell_to_coord(i-size))
 
 
-def get_flow_from_grid(x, y):
-    # nlt = [0, 0]
-    # nearest = [cell_to_coord(coord_to_cell(x)), cell_to_coord(coord_to_cell(y))]
-    # nlt = [coord_to_cell(i) for i in nearest[::-1]]
-    # if nearest[0] > x:
-    #     nlt[1] -= 1
-    # if nearest[1] > y:
-    #     nlt[0] -= 1
-    #
-    # nlt[0] = max(nlt[0], 0)
-    # nlt[0] = min(nlt[0], size-1)
-    # nlt[1] = max(nlt[1], 0)
-    # nlt[1] = min(nlt[1], size-1)
-    #
-    # nearest_coords = [[cell_to_coord(nlt[1]), cell_to_coord(nlt[0])],
-    #                   [cell_to_coord(nlt[1]+1), cell_to_coord(nlt[0])],
-    #                   [cell_to_coord(nlt[1]), cell_to_coord(nlt[0]+1)],
-    #                   [cell_to_coord(nlt[1]+1), cell_to_coord(nlt[0]+1)]]
-    # if x < 0 or x > size-1 or y < 0 or y > size-1:
-    #     nearest_coords = [[cell_to_coord(nlt[1]), cell_to_coord(nlt[0])]]
-    # interpoints = [[coord_to_cell(i)-1, coord_to_cell(j)-1] for i, j in nearest_coords]
-    # distances = [((j - x)**2 + (i - y)**2)**0.5 for i, j in nearest_coords]
-    # sumdist = 0
-    # dxdt, dydt = 0, 0
-    # for i in range(len(interpoints)):
-    #     # print(flow_grid[interpoints[i][0]][interpoints[i][1]])
-    #     dxdt += flow_grid[interpoints[i][0]][interpoints[i][1]][0]
-    #     dydt += flow_grid[interpoints[i][0]][interpoints[i][1]][1]
-    # dxdt /= 4
-    # dydt /= 4
+def get_flow_from_grid(x, y, interpolation):
+    if interpolation == 0:
+        nearest = [coord_to_cell(y)+size, coord_to_cell(x)+size]  # no interpolation
+        dxdt = flow_grid[nearest[0]][nearest[1]][0]
+        dydt = flow_grid[nearest[0]][nearest[1]][1]
+        # print(dxdt, dydt, 'no inter')
+        return dxdt, dydt
+    nlt = [0, 0]
+    nearest = [cell_to_coord(coord_to_cell(x)), cell_to_coord(coord_to_cell(y))]
+    nlt = [coord_to_cell(i) for i in nearest[::-1]]
+    if x == nearest[0] and y == nearest[1]:
+        # print(x, y)
+        dxdt = flow_grid[coord_to_cell(x)+size][coord_to_cell(y)+size][0]
+        dydt = flow_grid[coord_to_cell(x)+size][coord_to_cell(y)+size][1]
+        return dxdt, dydt
+    if nearest[0] > x:
+        nlt[1] -= 1
+    if nearest[1] > y:
+        nlt[0] -= 1
+    nearest_coords = [[cell_to_coord(nlt[1]), cell_to_coord(nlt[0])],
+                      [cell_to_coord(nlt[1]+1), cell_to_coord(nlt[0])],
+                      [cell_to_coord(nlt[1]), cell_to_coord(nlt[0]+1)],
+                      [cell_to_coord(nlt[1]+1), cell_to_coord(nlt[0]+1)]]
+    distances = [((j - x) ** 2 + (i - y) ** 2) ** 0.5 for i, j in nearest_coords]
+    nlt[0] += size
+    nlt[1] += size
+    nearset_weights = [flow_grid[nlt[0]][nlt[1]], flow_grid[nlt[0]][nlt[1]+1],
+                       flow_grid[nlt[0]+1][nlt[1]], flow_grid[nlt[0]+1][nlt[1]+1]]
+    dxdt, dydt, distsum = 0, 0, 0
+    if interpolation == 1:
+        for i in range(4):
+            dxdt += nearset_weights[i][0] / 4
+            dydt += nearset_weights[i][1] / 4
+        return dxdt, dydt
 
-    nearest = [coord_to_cell(y), coord_to_cell(x)]
-    nearest[0] = min(nearest[0], size-1)
-    nearest[0] = max(nearest[0], 0)
-    nearest[1] = min(nearest[1], size-1)
-    nearest[1] = max(nearest[1], 0)
-    dxdt = flow_grid[nearest[0]][nearest[1]][0]
-    dydt = flow_grid[nearest[0]][nearest[1]][1]
-    return dxdt, dydt
+    if interpolation == 2:
+        for i in range(4):
+            distance_coef = 1 / distances[i]
+            dxdt += nearset_weights[i][0] * distance_coef
+            dydt += nearset_weights[i][1] * distance_coef
+            distsum += distance_coef
+        dxdt /= distsum
+        dydt /= distsum
+        return  dxdt, dydt
+    raise ValueError('incorrect interpolation parameter')
+
 
 def particles_to_data(move=True):
-    global x, y
     for n in range(len(particles)):
         if move:
-            gradient = get_flow_from_grid(particles[n].x, particles[n].y)
+            gradient = get_flow_from_grid(particles[n].x, particles[n].y, interpolation=interpolation_type)
             # gradient = flow(particles[n].x, particles[n].y)
             particles[n].x += gradient[0]
             particles[n].y += gradient[1]
             if n in watchlist:
-                watch_coords[watchlist.index(n)].append([x, y])
+                watch_coords[watchlist.index(n)].append([particles[n].x, particles[n].y])
         y, x = particles[n].y, particles[n].x
         i, j = coord_to_cell(y), coord_to_cell(x)
         i_min, i_max = max(i, 0), min(i + spread_rad, size)
@@ -138,7 +144,7 @@ def particles_to_data(move=True):
 
 def just_move():
     for n in range(len(particles)):
-        gradient = get_flow_from_grid(particles[n].x, particles[n].y)
+        gradient = get_flow_from_grid(particles[n].x, particles[n].y, interpolation=interpolation_type)
         # gradient = flow(particles[n].x, particles[n].y)
         particles[n].x += gradient[0]
         particles[n].y += gradient[1]
@@ -166,7 +172,7 @@ for i in range(-size//2, size*3//2):    ##############  НАЧАЛО КОДА  #
 filenames.append('out_images\\plot0.png')
 particles_to_data(False)
 data_np = numpy.array(data)
-plt.imsave(filenames[-1], data_np, cmap='plasma')
+plt.imsave(filenames[-1], data_np, cmap='gist_heat')
 
 end_time = time.time()
 print(end_time - begin_time)
@@ -186,16 +192,21 @@ for k in range(frame_number):
     filenames.append('out_images\\plot' + str(k) + '.png')
     particles_to_data()
     data_np = numpy.array(data)
-    plt.imsave(filenames[-1], data_np, cmap='plasma')
+    plt.imsave(filenames[-1], data_np, cmap='gist_heat')
 
     end_time = time.time()
     total_time += end_time - begin_time
 
-f = open('out_stats\\third_problem_watch.txt', "w")
+f = open('out_stats\\third_problem_watch_inter_' + str(interpolation_type) + '.txt', "w")
+f.write('size = ' + str(size) + ', frame_number = ' + str(frame_number) +
+        ', scale = ' + str(scale) + ', particle_density = ' + str(particle_density) +
+        ', speed = ' + str(speed) + ', interpolation_type = ' + str(interpolation_type) + '\n')
+f.write('watchlist: ')
 for i in watchlist:
     f.write(str(i))
     f.write(' ')
 f.write('\n')
+f.write('watch_frames: ')
 for i in watch_frames:
     f.write(str(i))
     f.write(' ')
@@ -203,12 +214,10 @@ f.write('\n')
 for particle_number in range(len(watchlist)):
     for frame in watch_frames:
         f.write(str(watch_coords[particle_number][frame][0]))
-        # f.write(str(watch_coords[watchlist[i]][j][0]))
         f.write(' ')
         f.write(str(watch_coords[particle_number][frame][1]))
         f.write(' ')
     f.write('\n')
-    # print(i[0], i[99], i[199], sep=', ', end=',\n')
 f.close()
 
 with imageio.get_writer('out_mov\mov.gif',
@@ -219,7 +228,7 @@ with imageio.get_writer('out_mov\mov.gif',
 
 particles_to_data()
 data_np = numpy.array(data)
-plt.imsave('out_images\\plot' + '_last' + '.png', data_np, cmap='plasma')
+plt.imsave('out_images\\plot' + '_last' + '.png', data_np, cmap='gist_heat')
 
 plt.figure(figsize=(5,5))
 plt.imshow(data_np, cmap='gist_heat')
