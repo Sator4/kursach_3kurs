@@ -54,7 +54,6 @@ def flow(x, y):
     return [dxdt, dydt]
 
 def particles_to_data(move=True):
-    global x, y
     for n in range(len(particles)):
         if move:
             gradient = flow(particles[n].x, particles[n].y)
@@ -113,13 +112,11 @@ for i in range(-size//2, size*3//2):    ##############  НАЧАЛО КОДА  #
     for j in range(-size//2, size*3//2):
         if i % particle_density != 0 or j % particle_density != 0:
             continue
-        # if random.randint(1, 10) != 10:
+        # if j != size/2:
         #     continue
         x = cell_to_coord(j)
         y = cell_to_coord(i)
         weight = round(y + scale)
-        # if random.randint(1, 20) == 10:
-        # watchlist.append(len(watchlist))
         # watch_coords.append([[x, y]])
 
         # if len(particles)-1 in watchlist:
