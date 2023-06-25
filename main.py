@@ -87,12 +87,6 @@ def particles_to_data(move=True):
                     particles_in_pixel[i][j] < generate_threshold[1]:
                 particles.append(particle(cell_to_coord(j), cell_to_coord(i), data[i][j]))
 
-            # if min_distsum[0] > distsum_in_pixel[i][j]:
-            #     min_distsum = [distsum_in_pixel[i][j], particles_in_pixel[i][j], i, j]
-            # if min_distsum[1] > particles_in_pixel[i][j]:
-            #     min_distsum = [distsum_in_pixel[i][j], particles_in_pixel[i][j], i, j]
-    # print('min_distsum', min_distsum)
-    # print('len(particles)', len(particles))
 
 def just_move():
     for n in range(len(particles)):

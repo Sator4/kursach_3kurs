@@ -8,13 +8,13 @@ import time
 numpy.set_printoptions(linewidth=5000, precision=2, suppress=True, threshold=numpy.inf)
 
 size = 400
-frame_number = 300
+frame_number = 500
 scale = 5
 spread_rad = 1
 particle_density = 10
 generate_threshold = [0, 0]
 speed = 0.05
-write_output = False
+write_output = True
 pallete = 'gist_heat'
 
 
@@ -24,10 +24,12 @@ distsum_in_pixel = [[0 for i in range(size)] for j in range(size)] # сумма 
 # влияющих пискелей, аналог particles_in_pixel
 particles_in_pixel = [[0 for i in range(size)] for j in range(size)]
 filenames = []
-# watchlist = [992, 2081, 1638, 983, 1637, 2129, 2656, 1227, 1886, 1829]
-watchlist = []
+watchlist = [4690, 3152, 1787, 3478, 2128, 3239, 1962, 2615, 3146, 2761]
 watch_coords = []
-watch_frames = [0, 99, 199, 299]
+watch_frames = [0]
+for i in range(1, frame_number // 10 + 1):
+    watch_frames.append(i * 10 - 1)
+print(watch_frames)
 
 class particle:
     def __init__(self, x, y, weight):
@@ -56,9 +58,10 @@ def flow(x, y):
 def particles_to_data(move=True):
     for n in range(len(particles)):
         if move:
-            gradient = flow(particles[n].x, particles[n].y)
-            particles[n].x += gradient[0]
-            particles[n].y += gradient[1]
+            for i in range(1):
+                gradient = flow(particles[n].x, particles[n].y)
+                particles[n].x += gradient[0]
+                particles[n].y += gradient[1]
             if write_output:
                 if n in watchlist:
                     watch_coords[watchlist.index(n)].append([particles[n].x, particles[n].y])
@@ -85,13 +88,6 @@ def particles_to_data(move=True):
                     particles_in_pixel[i][j] < generate_threshold[1]:
                 particles.append(particle(cell_to_coord(j), cell_to_coord(i), data[i][j]))
 
-            # if min_distsum[0] > distsum_in_pixel[i][j]:
-            #     min_distsum = [distsum_in_pixel[i][j], particles_in_pixel[i][j], i, j]
-            # if min_distsum[1] > particles_in_pixel[i][j]:
-            #     min_distsum = [distsum_in_pixel[i][j], particles_in_pixel[i][j], i, j]
-    # print('min_distsum', min_distsum)
-    # print('len(particles)', len(particles))
-
 def just_move():
     for n in range(len(particles)):
         gradient = flow(particles[n].x, particles[n].y)
@@ -101,9 +97,13 @@ def just_move():
 
 begin_time = time.time()
 
-# x = -0.5
-# y = -0.5
+# x = -0.25
+# y = -0.25
 # weight = 1
+# watchlist.append(len(particles))
+# watch_coords.append([[x, y]])
+# particles.append(particle(x + scale / size, y + scale / size, weight))
+# weight = 2
 # watchlist.append(len(particles))
 # watch_coords.append([[x, y]])
 # particles.append(particle(x + scale / size, y + scale / size, weight))
@@ -116,14 +116,11 @@ for i in range(-size//2, size*3//2):    ##############  НАЧАЛО КОДА  #
         #     continue
         x = cell_to_coord(j)
         y = cell_to_coord(i)
-        weight = round(y + scale)
-        # watch_coords.append([[x, y]])
-
-        # if len(particles)-1 in watchlist:
-        #     weight = 2
-        #     watch_coords.append([[x, y]])
-        # else:
-        #     weight = 1
+        if len(particles)-1 in watchlist:
+            weight = 2
+            watch_coords.append([[x, y]])
+        else:
+            weight = 1
         # weight = initial_distribution(x, y, scale)
         particles.append(particle(x + scale / size, y + scale / size, weight))
 
@@ -196,3 +193,13 @@ plt.show()
 
 total_time += end_time - begin_time
 print(total_time)
+
+average_distanse_from_center = []
+for i in range(len(watch_frames)):
+    sum_ = 0
+    for j in range(len(watchlist)):
+        sum_ += ((watch_coords[j][i][0]**2 + watch_coords[j][i][1]**2))**0.5
+    average_distanse_from_center.append(sum_ / len(watchlist))
+print(average_distanse_from_center)
+
+

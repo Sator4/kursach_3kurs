@@ -7,14 +7,14 @@ import time
 numpy.set_printoptions(linewidth=5000, precision=2, suppress=True, threshold=numpy.inf)
 
 size = 400
-frame_number = 300
+frame_number = 500
 scale = 5
 spread_rad = 1
 particle_density = 10
 generate_threshold = [0, 0]
 speed = 0.05
-write_output = False
-pallete = 'plasma'
+write_output = True
+pallete = 'gist_heat'
 
 
 data = [[0 for i in range(size)] for j in range(size)]    #пиксели, отрисовка
@@ -23,10 +23,12 @@ distsum_in_pixel = [[0 for i in range(size)] for j in range(size)] # сумма 
 # влияющих пискелей, аналог particles_in_pixel
 particles_in_pixel = [[0 for i in range(size)] for j in range(size)]
 filenames = []
-# watchlist = [992, 2081, 1638, 983, 1637, 2129, 2656, 1227, 1886, 1829]
-watchlist = []
+watchlist = [4690, 3152, 1787, 3478, 2128, 3239, 1962, 2615, 3146, 2761]
 watch_coords = []
-watch_frames = [0, 499]
+watch_frames = [0]
+for i in range(1, frame_number // 10 + 1):
+    watch_frames.append(i * 10 - 1)
+print(watch_frames)
 
 class particle:
     def __init__(self, x, y, weight):
@@ -50,7 +52,7 @@ def flow(x, y):
     r = (x*x + y*y)**0.5
     if r == 0:
         return [0.0, 0.0]
-    Vt_r = math.tanh(r) / math.cosh(r) ** 2
+    Vt_r = math.tanh(r) / math.cosh(r)**2
     theta = math.pi / 2
     if x != 0:
         theta = math.atan(y / x)
@@ -89,12 +91,6 @@ def particles_to_data(move=True):
                     particles_in_pixel[i][j] < generate_threshold[1]:
                 particles.append(particle(cell_to_coord(j), cell_to_coord(i), data[i][j]))
 
-            # if min_distsum[0] > distsum_in_pixel[i][j]:
-            #     min_distsum = [distsum_in_pixel[i][j], particles_in_pixel[i][j], i, j]
-            # if min_distsum[1] > particles_in_pixel[i][j]:
-            #     min_distsum = [distsum_in_pixel[i][j], particles_in_pixel[i][j], i, j]
-    # print('min_distsum', min_distsum)
-    # print('len(particles)', len(particles))
 
 def just_move():
     for n in range(len(particles)):
@@ -125,14 +121,14 @@ for i in range(-size//2, size*3//2):    ##############  НАЧАЛО КОДА  #
 filenames.append('out_images\\plot0.png')
 particles_to_data(False)
 data_np = numpy.array(data)
-plt.imsave(filenames[-1], data_np, cmap='gist_heat')
+plt.imsave(filenames[-1], data_np, cmap=pallete)
 
 end_time = time.time()
 print(end_time - begin_time)
 total_time = 0
 
 run_till = frame_number
-for k in range(frame_number):
+for k in range(1, frame_number):
     while run_till <= k:
         run_till = int(input("New run_till:"))
     if (k+1) % 10 == 0:
@@ -145,47 +141,58 @@ for k in range(frame_number):
     filenames.append('out_images\\plot' + str(k) + '.png')
     particles_to_data()
     data_np = numpy.array(data)
-    plt.imsave(filenames[-1], data_np, cmap='gist_heat')
+    plt.imsave(filenames[-1], data_np, cmap=pallete)
 
     end_time = time.time()
     total_time += end_time - begin_time
 
-f = open('out_stats\\second_problem_watch.txt', "w")
-f.write('size = ' + str(size) + ', frame_number = ' + str(frame_number) +
-        ', scale = ' + str(scale) + ', particle_density = ' + str(particle_density) +
-        ', speed = ' + str(speed) + '\n')
-f.write('watchlist: ')
-for i in watchlist:
-    f.write(str(i))
-    f.write(' ')
-f.write('\n')
-f.write('watch_frames: ')
-for i in watch_frames:
-    f.write(str(i))
-    f.write(' ')
-f.write('\n')
-for particle_number in range(len(watchlist)):
-    for frame in watch_frames:
-        f.write(str(watch_coords[particle_number][frame][0]))
-        f.write(' ')
-        f.write(str(watch_coords[particle_number][frame][1]))
+if write_output:
+    f = open('out_stats\\second_problem_watch.txt', "w")
+    f.write('size = ' + str(size) + ', frame_number = ' + str(frame_number) +
+            ', scale = ' + str(scale) + ', particle_density = ' + str(particle_density) +
+            ', speed = ' + str(speed) + '\n')
+    f.write('watchlist: ')
+    for i in watchlist:
+        f.write(str(i))
         f.write(' ')
     f.write('\n')
-f.close()
+    f.write('watch_frames: ')
+    for i in watch_frames:
+        f.write(str(i))
+        f.write(' ')
+    f.write('\n')
+    for particle_number in range(len(watchlist)):
+        for frame in watch_frames:
+            f.write(str(watch_coords[particle_number][frame][0]))
+            f.write(' ')
+            f.write(str(watch_coords[particle_number][frame][1]))
+            f.write(' ')
+        f.write('\n')
+    f.close()
 
 with imageio.get_writer('out_mov\mov.gif',
-                        mode='I', duration=0.033) as writer:
+                        mode='I', duration=0.017) as writer:
     for filename in filenames:
         image = imageio.imread(filename)
         writer.append_data(image)
 
 particles_to_data()
 data_np = numpy.array(data)
-plt.imsave('out_images\\plot' + '_last' + '.png', data_np, cmap='gist_heat')
+plt.imsave('out_images\\plot' + '_last' + '.png', data_np, cmap=pallete)
 
 plt.figure(figsize=(5,5))
-plt.imshow(data_np, cmap='gist_heat')
+plt.imshow(data_np, cmap=pallete)
 plt.show()
 
 total_time += end_time - begin_time
 print(total_time)
+
+average_distanse_from_center = []
+for i in range(len(watch_frames)):
+    sum_ = 0
+    for j in range(len(watchlist)):
+        sum_ += ((watch_coords[j][i][0]**2 + watch_coords[j][i][1]**2))**0.5
+    average_distanse_from_center.append(sum_ / len(watchlist))
+print(average_distanse_from_center)
+
+
