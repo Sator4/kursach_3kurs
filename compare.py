@@ -9,6 +9,7 @@ first_third_diff = []
 
 
 
+
 first_problem.close()
 second_problem.close()
 third_problem.close()

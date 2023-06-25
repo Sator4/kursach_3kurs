@@ -6,14 +6,15 @@ import imageio
 import time
 numpy.set_printoptions(linewidth=5000, precision=2, suppress=True, threshold=numpy.inf)
 
-size = 300
-frame_number = 500
+size = 400
+frame_number = 300
 scale = 5
 spread_rad = 1
 particle_density = 10
 generate_threshold = [0, 0]
 speed = 0.05
-
+write_output = False
+pallete = 'plasma'
 
 
 data = [[0 for i in range(size)] for j in range(size)]    #пиксели, отрисовка
@@ -22,7 +23,8 @@ distsum_in_pixel = [[0 for i in range(size)] for j in range(size)] # сумма 
 # влияющих пискелей, аналог particles_in_pixel
 particles_in_pixel = [[0 for i in range(size)] for j in range(size)]
 filenames = []
-watchlist = [992, 2081, 1638, 983, 1637, 2129, 2656, 1227, 1886, 1829]
+# watchlist = [992, 2081, 1638, 983, 1637, 2129, 2656, 1227, 1886, 1829]
+watchlist = []
 watch_coords = []
 watch_frames = [0, 499]
 
@@ -41,7 +43,7 @@ def cell_to_coord(i):
 def coord_to_cell(x):
     return round(x*(size/scale) + size/2)
 
-def initial_distribution(x, y, scale):
+def initial_distribution(x, y):
     return math.atan(y*20 / scale) + math.pi/2
 
 def flow(x, y):
