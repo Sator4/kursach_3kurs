@@ -55,6 +55,15 @@ def flow(x, y):
     dydt = speed * (Vt_r * x / r)
     return [dxdt, dydt]
 
+def rk4_step(x, y, h):
+    k1 = flow(x, y)
+    k2 = flow(x + h/2 * k1[0], y + h/2 * k1[1])
+    k3 = flow(x + h/2 * k2[0], y + h/2 * k2[1])
+    k4 = flow(x + h * k3[0], y + h * k3[1])
+    dxdt = (k1[0] + 2*k2[0] + 2*k3[0] + k4[0]) / 6
+    dydt = (k1[1] + 2*k2[1] + 2*k3[1] + k4[1]) / 6
+    return [dxdt, dydt]
+
 def particles_to_data(move=True):
     for n in range(len(particles)):
         if move:

@@ -12,7 +12,7 @@ scale = 5
 spread_rad = 1
 particle_density = 10
 generate_threshold = [0, 0]
-speed = 0.01
+speed = 0.05
 write_output = True
 pallete = 'gist_heat'
 
