@@ -1,5 +1,4 @@
 import math
-import random
 
 from matplotlib import pyplot as plt
 import numpy
@@ -56,12 +55,11 @@ def flow(x, y):
 def particles_to_data(move=True):
     for n in range(len(particles)):
         if move:
-            gradient = flow(particles[n].x, particles[n].y)
+            gradient = rk4_step(particles[n].x, particles[n].y, speed)
             particles[n].x += gradient[0]
             particles[n].y += gradient[1]
-            if write_output:
-                if n in watchlist:
-                    watch_coords[watchlist.index(n)].append([particles[n].x, particles[n].y])
+            if n in watchlist:
+                watch_coords[watchlist.index(n)].append([particles[n].x, particles[n].y])
         y, x = particles[n].y, particles[n].x
         i, j = coord_to_cell(y), coord_to_cell(x)
         i_min, i_max = max(i, 0), min(i + spread_rad, size)
@@ -92,6 +90,15 @@ def particles_to_data(move=True):
     # print('min_distsum', min_distsum)
     # print('len(particles)', len(particles))
 
+def rk4_step(x, y, h):
+    k1 = flow(x, y)
+    k2 = flow(x + h/2 * k1[0], y + h/2 * k1[1])
+    k3 = flow(x + h/2 * k2[0], y + h/2 * k2[1])
+    k4 = flow(x + h * k3[0], y + h * k3[1])
+    dxdt = (k1[0] + 2*k2[0] + 2*k3[0] + k4[0]) / 6
+    dydt = (k1[1] + 2*k2[1] + 2*k3[1] + k4[1]) / 6
+    return [dxdt, dydt]
+
 def just_move():
     for n in range(len(particles)):
         gradient = flow(particles[n].x, particles[n].y)
@@ -101,13 +108,6 @@ def just_move():
 
 begin_time = time.time()
 
-# x = -0.5
-# y = -0.5
-# weight = 1
-# watchlist.append(len(particles))
-# watch_coords.append([[x, y]])
-# particles.append(particle(x + scale / size, y + scale / size, weight))
-
 for i in range(-size//2, size*3//2):    ##############  НАЧАЛО КОДА  ###################
     for j in range(-size//2, size*3//2):
         if i % particle_density != 0 or j % particle_density != 0:
@@ -116,14 +116,11 @@ for i in range(-size//2, size*3//2):    ##############  НАЧАЛО КОДА  #
         #     continue
         x = cell_to_coord(j)
         y = cell_to_coord(i)
-        weight = round(y + scale)
-        # watch_coords.append([[x, y]])
-
-        # if len(particles)-1 in watchlist:
-        #     weight = 2
-        #     watch_coords.append([[x, y]])
-        # else:
-        #     weight = 1
+        if len(particles)-1 in watchlist:
+            weight = 2
+            watch_coords.append([[x, y]])
+        else:
+            weight = 1
         # weight = initial_distribution(x, y, scale)
         particles.append(particle(x + scale / size, y + scale / size, weight))
 
@@ -131,14 +128,14 @@ for i in range(-size//2, size*3//2):    ##############  НАЧАЛО КОДА  #
 filenames.append('out_images\\plot0.png')
 particles_to_data(False)
 data_np = numpy.array(data)
-plt.imsave(filenames[-1], data_np, cmap=pallete)
+plt.imsave(filenames[-1], data_np, cmap='gist_heat')
 
 end_time = time.time()
 print(end_time - begin_time)
 total_time = 0
 
 run_till = frame_number
-for k in range(1, frame_number):
+for k in range(frame_number):
     while run_till <= k:
         run_till = int(input("New run_till:"))
     if (k+1) % 10 == 0:
@@ -151,47 +148,46 @@ for k in range(1, frame_number):
     filenames.append('out_images\\plot' + str(k) + '.png')
     particles_to_data()
     data_np = numpy.array(data)
-    plt.imsave(filenames[-1], data_np, cmap=pallete)
+    plt.imsave(filenames[-1], data_np, cmap='gist_heat')
 
     end_time = time.time()
     total_time += end_time - begin_time
 
-if write_output:
-    f = open('out_stats\\first_problem_watch.txt', "w")
-    f.write('size = ' + str(size) + ', frame_number = ' + str(frame_number) +
-            ', scale = ' + str(scale) + ', particle_density = ' + str(particle_density) +
-            ', speed = ' + str(speed) + '\n')
-    f.write('watchlist: ')
-    for i in watchlist:
-        f.write(str(i))
+f = open('out_stats\\second_problem_watch.txt', "w")
+f.write('size = ' + str(size) + ', frame_number = ' + str(frame_number) +
+        ', scale = ' + str(scale) + ', particle_density = ' + str(particle_density) +
+        ', speed = ' + str(speed) + '\n')
+f.write('watchlist: ')
+for i in watchlist:
+    f.write(str(i))
+    f.write(' ')
+f.write('\n')
+f.write('watch_frames: ')
+for i in watch_frames:
+    f.write(str(i))
+    f.write(' ')
+f.write('\n')
+for particle_number in range(len(watchlist)):
+    for frame in watch_frames:
+        f.write(str(watch_coords[particle_number][frame][0]))
+        f.write(' ')
+        f.write(str(watch_coords[particle_number][frame][1]))
         f.write(' ')
     f.write('\n')
-    f.write('watch_frames: ')
-    for i in watch_frames:
-        f.write(str(i))
-        f.write(' ')
-    f.write('\n')
-    for particle_number in range(len(watchlist)):
-        for frame in watch_frames:
-            f.write(str(watch_coords[particle_number][frame][0]))
-            f.write(' ')
-            f.write(str(watch_coords[particle_number][frame][1]))
-            f.write(' ')
-        f.write('\n')
-    f.close()
+f.close()
 
 with imageio.get_writer('out_mov\mov.gif',
-                        mode='I', duration=0.017) as writer:
+                        mode='I', duration=0.033) as writer:
     for filename in filenames:
         image = imageio.imread(filename)
         writer.append_data(image)
 
 particles_to_data()
 data_np = numpy.array(data)
-plt.imsave('out_images\\plot' + '_last' + '.png', data_np, cmap=pallete)
+plt.imsave('out_images\\plot' + '_last' + '.png', data_np, cmap='gist_heat')
 
 plt.figure(figsize=(5,5))
-plt.imshow(data_np, cmap=pallete)
+plt.imshow(data_np, cmap='gist_heat')
 plt.show()
 
 total_time += end_time - begin_time
